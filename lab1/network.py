@@ -14,6 +14,11 @@ class ConvolutionNetwork(nn.Module):
         self.fc1 = nn.Linear(64 * 28 * 28, 1024)
         self.fc2 = nn.Linear(1024, num_classes)
         self.pool = nn.MaxPool2d(2, 2)
+        nn.init.kaiming_uniform_(self.conv1.weight, mode='fan_in', nonlinearity='relu')
+        nn.init.kaiming_uniform_(self.conv2.weight, mode='fan_in', nonlinearity='relu')
+        nn.init.kaiming_uniform_(self.conv3.weight, mode='fan_in', nonlinearity='relu')
+        nn.init.kaiming_uniform_(self.fc1.weight, mode='fan_in', nonlinearity='relu')
+        nn.init.kaiming_uniform_(self.fc2.weight, mode='fan_in', nonlinearity='relu')
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
