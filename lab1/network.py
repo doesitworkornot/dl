@@ -1,39 +1,8 @@
 import torch
-import torch.nn.functional as F
-import torch.nn as nn
 import numpy as np
 
 
-class ConvolutionNetwork(nn.Module):
-    def __init__(self, criterion, num_classes: int = 42):
-        super().__init__()
-        self.criterion = criterion
-        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)
-        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-        self.fc1 = nn.Linear(64 * 28 * 28, 1024)
-        self.fc2 = nn.Linear(1024, num_classes)
-        self.pool = nn.MaxPool2d(2, 2)
-        nn.init.kaiming_uniform_(self.conv1.weight, mode='fan_in', nonlinearity='relu')
-        nn.init.kaiming_uniform_(self.conv2.weight, mode='fan_in', nonlinearity='relu')
-        nn.init.kaiming_uniform_(self.conv3.weight, mode='fan_in', nonlinearity='relu')
-        nn.init.kaiming_uniform_(self.fc1.weight, mode='fan_in', nonlinearity='relu')
-        nn.init.kaiming_uniform_(self.fc2.weight, mode='fan_in', nonlinearity='relu')
-
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = self.pool(x)
-        x = F.relu(self.conv2(x))
-        x = self.pool(x)
-        x = F.relu(self.conv3(x))
-        x = self.pool(x)
-        x = x.view(-1, 64 * 28 * 28)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
-        return F.softmax(x, dim=1)
-
-
-def train_step(model, train_dataloader, optimizer) -> float:
+def train_step(model, train_dataloader, optimizer, scheduler, criterion) -> float:
     model.train()
     cuda0 = torch.device('cuda:0')
     running_loss = 0.
@@ -44,9 +13,10 @@ def train_step(model, train_dataloader, optimizer) -> float:
         labels = labels.to(cuda0)
 
         output = model(images)
-        loss = model.criterion(output, labels)
+        loss = criterion(output, labels)
         loss.backward()
         optimizer.step()
+        scheduler.step()
         running_loss += loss.detach().cpu().numpy()
 
     with torch.no_grad():
@@ -55,7 +25,7 @@ def train_step(model, train_dataloader, optimizer) -> float:
     return train_loss
 
 
-def valid_step(model, valid_dataloader) -> tuple[float, float]:
+def valid_step(model, valid_dataloader, criterion) -> tuple[float, float]:
     model.eval()
     cuda0 = torch.device('cuda:0')
     correct_total = 0.
@@ -69,7 +39,7 @@ def valid_step(model, valid_dataloader) -> tuple[float, float]:
             prediction = output.argmax(dim=1)
 
             correct_total += prediction.eq(labels.view_as(prediction)).sum().detach().cpu().numpy()
-            loss = model.criterion(output, labels)
+            loss = criterion(output, labels)
             running_loss += loss.detach().cpu().numpy()
 
     valid_loss = running_loss / len(valid_dataloader)
@@ -79,7 +49,6 @@ def valid_step(model, valid_dataloader) -> tuple[float, float]:
 
 def test_step(model, test_loader, device):
     model.eval()
-
     y_pred = []
     y_test = []
     for img, labels in test_loader:
