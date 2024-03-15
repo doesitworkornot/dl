@@ -7,9 +7,8 @@ from torchvision import transforms
 class SimpsonDataset(Dataset):
     def __init__(self, root_dir):
         transform = transforms.Compose([
-            transforms.Resize((250, 250)),
+            transforms.Resize((280, 280)),
             transforms.RandomCrop((224, 224)),
-            transforms.RandomHorizontalFlip(p=0.5),
             transforms.ToTensor()
         ])
 

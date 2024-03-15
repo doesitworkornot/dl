@@ -16,9 +16,9 @@ def train_step(model, train_dataloader, optimizer, scheduler, criterion) -> floa
         loss = criterion(output, labels)
         loss.backward()
         optimizer.step()
-        scheduler.step()
-        running_loss += loss.detach().cpu().numpy()
 
+        running_loss += loss.detach().cpu().numpy()
+    scheduler.step()
     with torch.no_grad():
         train_loss = running_loss / len(train_dataloader)
 
